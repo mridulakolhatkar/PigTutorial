@@ -1,0 +1,41 @@
+/* Qurying movies dataset--
+(id,name,year,rating,duration)*/
+
+/* 1.filter out records which don't have all the above fields and duplicates */
+load_movies = LOAD 'movies_data.csv' USING PigStorage(',') AS (id:int,name:chararray,year:int,rating:float,duration:int);
+remove_duplicates = DISTINCT load_movies;
+movies = FILTER remove_duplicates BY SIZE(TOTUPLE(*)) == 5;
+/*DUMP 'movies'*/;
+
+/*2.avg rating for -1976-1988,1989-2001,2002-2016.Which decade has highest rating*/
+first_decade = FILTER movies BY year>=1976 and year<=1988; /* take range of ratings aside*/
+all_first_decade = GROUP first_decade ALL; /* group them all in a group for average*/
+first_deccade_rating = FOREACH all_first_decade GENERATE AVG(first_decade.rating);
+/*DUMP first_deccade_rating;*/
+
+/*3.how many movies have hippo in them*/
+hippo_movies = FILTER movies BY name matches '(?i).*hippo.*'; /*(?i)java regex for case agnostic*/
+DUMP hippo_movies;
+group_hippo = GROUP hippo_movies ALL;
+total_hippo_movies = FOREACH group_hippo GENERATE group,COUNT(hippo_movies.id);
+DUMP total_hippo_movies;
+
+/*4.longest movie name*/
+movie_sizes = FOREACH movies GENERATE SIZE(name) as length,name; /*generate size of the name and name tuples*/
+all_sizes = GROUP movie_sizes ALL;
+max_size = FOREACH all_sizes GENERATE group,MAX(movie_sizes.length); /*get max size*/
+/*to get name along with max size-join max_size with movie_sizes. Bigger set first.Since we only want 1 record with max size and movie name right outer.
+Shows all records from max_size,which is 1 and corrosponding records from movie_sizes*/
+longest_name = JOIN movie_sizes BY $0 RIGHT OUTER,max_size BY $1;
+DUMP longest_name;
+
+/*5.which year has highest number of movies*/
+
+/*
+6.range of ratings
+7.longest movie duration
+8.oldest movie
+9.movies with series
+10.total number of movies
+*/
+
